@@ -14,19 +14,13 @@ abstract class Movimiento {
   public double getMonto() {
     return monto;
   }
-
   public LocalDate getFecha() {
     return fecha;
   }
 
   public boolean esDeLaFecha(LocalDate fecha) {
-    return this.fecha.equals(fecha);
+    return getFecha().equals(fecha);
   }
 
-  public void agregateA(Cuenta cuenta) {
-    cuenta.setSaldo(calcularValor(cuenta));
-    cuenta.agregarMovimiento(fecha, monto, esDeposito);
-  }
-
-  abstract public double calcularValor(Cuenta cuenta);
+  abstract public double nuevoSaldo(Cuenta cuenta);
 }

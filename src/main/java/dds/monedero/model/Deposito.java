@@ -12,7 +12,7 @@ public class Deposito extends Movimiento {
   }
 
   @Override
-  public double calcularValor(Cuenta cuenta) {
+  public double nuevoSaldo(Cuenta cuenta) {
     return cuenta.getSaldo() + getMonto();
   }
 }

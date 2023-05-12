@@ -8,10 +8,15 @@ import dds.monedero.exceptions.SaldoMenorException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Cuenta {
   private double saldo;
-  private List<Movimiento> movimientos = new ArrayList<>();
+  private double limite = 1000;
+  private double cantDeposDiarios = 3;
+  private List<Deposito> depositos = new ArrayList<>();
+  private List<Extraccion> extracciones = new ArrayList<>();
 
   public Cuenta() {
     saldo = 0;
@@ -20,52 +25,71 @@ public class Cuenta {
     saldo = montoInicial;
   }
 
-  public void poner(double cuanto) {
-    if (cuanto <= 0) {
-      throw new MontoNegativoException(cuanto + ": el monto a ingresar debe ser un valor positivo");
-    }
-
-    if (getMovimientos().stream().filter(movimiento -> movimiento.isDeposito()).count() >= 3) {
-      throw new MaximaCantidadDepositosException("Ya excedio los " + 3 + " depositos diarios");
-    }
-
-    new Movimiento(LocalDate.now(), cuanto, true).agregateA(this);
+  public void poner(double monto) {
+    validarDeposito(monto);
+    registrarDeposito(LocalDate.now(), monto);
   }
 
-  public void sacar(double cuanto) {
-    if (cuanto <= 0) {
-      throw new MontoNegativoException(cuanto + ": el monto a ingresar debe ser un valor positivo");
-    }
-    if (getSaldo() - cuanto < 0) {
-      throw new SaldoMenorException("No puede sacar mas de " + getSaldo() + " $");
-    }
-    double montoExtraidoHoy = getMontoExtraidoA(LocalDate.now());
-    double limite = 1000 - montoExtraidoHoy;
-    if (cuanto > limite) {
-      throw new MaximoExtraccionDiarioException("No puede extraer mas de $ " + 1000
-          + " diarios, límite: " + limite);
-    }
-    new Movimiento(LocalDate.now(), cuanto, false).agregateA(this);
+  public void sacar(double monto) {
+    validarExtraccion(monto);
+    registrarExtraccion(LocalDate.now(), monto);
   }
 
-  public void agregarMovimiento(LocalDate fecha, double cuanto, boolean esDeposito) {
-    Movimiento movimiento = new Movimiento(fecha, cuanto, esDeposito);
-    movimientos.add(movimiento);
+  public void chequearMontoPositivo(double monto){
+    if (monto <= 0) {
+      throw new MontoNegativoException(monto + ": el monto a ingresar debe ser un valor positivo");
+    }
   }
 
-  public double getMontoExtraidoA(LocalDate fecha) {
-    return getMovimientos().stream()
-        .filter(movimiento -> !movimiento.isDeposito() && movimiento.getFecha().equals(fecha))
+  public void validarDeposito(double monto){
+    if (cantDepositosFecha(LocalDate.now()) == cantDeposDiarios) {
+      throw new MaximaCantidadDepositosException("Excedio los " + cantDeposDiarios + " depositos diarios");
+    }
+    chequearMontoPositivo(monto);
+  }
+
+  public void validarExtraccion(double monto){
+    chequearMontoPositivo(monto);
+    if (getSaldo()-monto < 0) {
+      throw new SaldoMenorException("No puede sacar mas de $" + getSaldo());
+    }
+    else if (monto > limite - montoExtraidoA(LocalDate.now())) {
+      throw new MaximoExtraccionDiarioException("No puede extraer mas de $" + limite + " diarios");
+    }
+  }
+
+  public void registrarDeposito(LocalDate fecha, double monto) {
+    Deposito deposito = new Deposito(fecha, monto);
+    depositos.add(deposito);
+    setSaldo(deposito);
+  }
+
+  public void registrarExtraccion(LocalDate fecha, double monto) {
+    Extraccion extraccion = new Extraccion(fecha, monto);
+    extracciones.add(extraccion);
+    setSaldo(extraccion);
+  }
+
+  public void setSaldo(Movimiento movimiento){
+    this.saldo = movimiento.nuevoSaldo(this);
+  }
+
+  public long cantDepositosFecha(LocalDate fecha){
+    return getDepositos().stream().filter(deposito -> deposito.fueDepositado(fecha)).count();
+  }
+
+  public double montoExtraidoA(LocalDate fecha) {
+    return getExtracciones().stream()
+        .filter(extraccion -> extraccion.fueExtraido(fecha))
         .mapToDouble(Movimiento::getMonto)
         .sum();
   }
 
-  public List<Movimiento> getMovimientos() {
-    return movimientos;
-  }
-  public void setMovimientos(List<Movimiento> movimientos) {
-    this.movimientos = movimientos;
-  }
-
   public double getSaldo() { return saldo; }
+  public List<Deposito> getDepositos() {
+    return depositos;
+  }
+  public List<Extraccion> getExtracciones() {
+    return extracciones;
+  }
 }
