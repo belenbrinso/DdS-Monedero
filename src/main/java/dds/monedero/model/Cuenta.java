@@ -41,6 +41,9 @@ public class Cuenta {
   public void setSaldo(Movimiento movimiento) {
     this.saldo = movimiento.nuevoSaldo(this);
   }
+  public void setSaldo(double nuevoSaldo) {
+    this.saldo = nuevoSaldo;
+  }
   public double getSaldo() { return saldo; }
 
   public List<Deposito> getDepositos() {
